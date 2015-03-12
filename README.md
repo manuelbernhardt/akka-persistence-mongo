@@ -222,6 +222,22 @@ casbah-journal-mongo-journal-write-concern-timeout = 5000
 
 <br/>See the [Mongo Write Concern](#mongo-write-concern) section of this document for more information.
 
+### Plain BSON Serialization
+
+By default the plugin will use the configured akka serializer (Java Serialization, Protobuf etc.) in order to serialize the messages. If you want to serialize messages as BSON objects directly instead of a binary format, you can do so as follows:
+
+```scala
+casbah-journal.bson-serialization = "salat"
+```
+
+For the moment, only serialization using [Salat](http://github.com/novus/salat) is supported.
+
+You can also register custom BSON encoders / decoders by extending the `com.mongodb.casbah.commons.conversions.MongoConversionHelper` class and specifying its fully-qualified name in the configuration:
+
+```scala
+casbah-journal.bson-conversion-helpers = "com.application.CustomConversionHelpers"
+```
+
 ## Snapshot Configuration
 
 ### Activation

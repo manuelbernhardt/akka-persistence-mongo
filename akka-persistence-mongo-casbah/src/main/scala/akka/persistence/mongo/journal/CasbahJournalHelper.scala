@@ -5,12 +5,10 @@ package akka.persistence.mongo.journal
 
 import akka.actor.ActorLogging
 import akka.persistence.PersistentRepr
-
+import akka.persistence.mongo.{IndexesSupport, MongoPersistenceJournalRoot}
 import com.mongodb.casbah.Imports._
 
-import akka.persistence.mongo.{IndexesSupport, MongoPersistenceJournalRoot}
-
-private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot with IndexesSupport {
+private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot with IndexesSupport with BSONSerializationSupport {
   mixin : ActorLogging =>
   val PersistenceIdKey = "persistenceId"
   val SequenceNrKey = "sequenceNr"
@@ -18,13 +16,14 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot wit
   val AddDetailsKey = "details"
   val MarkerKey = "marker"
   val MessageKey = "message"
+  val TypeHintKey = "t"
   val MarkerAccepted = "A"
   val MarkerConfirmPrefix = "C"
   def markerConfirm(cId: String) = s"C-$cId"
   def markerConfirmParsePrefix(cId: String) = cId.substring(0,1)
   def markerConfirmParseSuffix(cId: String) = cId.substring(2)
   val MarkerDelete = "D"
-
+  
   private[this] val idx1 = MongoDBObject(
     "persistenceId"         -> 1,
     "sequenceNr"          -> 1,
@@ -54,7 +53,14 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot wit
     builder += PersistenceIdKey -> pId
     builder += SequenceNrKey  -> sNr
     builder += MarkerKey      -> MarkerAccepted
-    builder += MessageKey     -> toBytes(pr)
+
+    bsonSerialization.map { bs =>
+      builder += TypeHintKey -> pr.payload.getClass.getName
+      builder += MessageKey -> bs.toBSON(pr.payload)
+    } getOrElse {
+        builder += MessageKey -> toBytes(pr)
+    }
+
     builder.result()
   }
 
